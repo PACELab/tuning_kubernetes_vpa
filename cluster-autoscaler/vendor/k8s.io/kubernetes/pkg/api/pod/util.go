@@ -434,6 +434,8 @@ func GetValidationOptionsFromPodSpecAndMeta(podSpec, oldPodSpec *api.PodSpec, po
 		AllowExpandedDNSConfig: utilfeature.DefaultFeatureGate.Enabled(features.ExpandedDNSConfig) || haveSameExpandedDNSConfig(podSpec, oldPodSpec),
 		// Allow pod spec to use OS field
 		AllowOSField: utilfeature.DefaultFeatureGate.Enabled(features.IdentifyPodOS),
+		// Allow pod spec to use status.hostIPs in downward API if feature is enabled
+		AllowHostIPsField: utilfeature.DefaultFeatureGate.Enabled(features.PodHostIPs),
 		// The default sysctl value does not contain a forward slash, and in 1.24 we intend to relax this to be true by default
 		AllowSysctlRegexContainSlash: false,
 	}
@@ -454,6 +456,9 @@ func GetValidationOptionsFromPodSpecAndMeta(podSpec, oldPodSpec *api.PodSpec, po
 		// if old spec has OS field set, we must allow it
 		opts.AllowOSField = opts.AllowOSField || oldPodSpec.OS != nil
 
+		// if old spec has status.hostIPs downwardAPI set, we must allow it
+		opts.AllowHostIPsField = opts.AllowHostIPsField || hasUsedDownwardAPIFieldPathWithPodSpec(oldPodSpec, "status.hostIPs")
+
 		// if old spec used non-integer multiple of huge page unit size, we must allow it
 		opts.AllowIndivisibleHugePagesValues = usesIndivisibleHugePagesValues(oldPodSpec)
 
@@ -468,6 +473,57 @@ func GetValidationOptionsFromPodSpecAndMeta(podSpec, oldPodSpec *api.PodSpec, po
 	}
 
 	return opts
+}
+
+func hasUsedDownwardAPIFieldPathWithPodSpec(podSpec *api.PodSpec, fieldPath string) bool {
+	if podSpec == nil {
+		return false
+	}
+	for _, vol := range podSpec.Volumes {
+		if hasUsedDownwardAPIFieldPathWithVolume(&vol, fieldPath) {
+			return true
+		}
+	}
+	for _, c := range podSpec.InitContainers {
+		if hasUsedDownwardAPIFieldPathWithContainer(&c, fieldPath) {
+			return true
+		}
+	}
+	for _, c := range podSpec.Containers {
+		if hasUsedDownwardAPIFieldPathWithContainer(&c, fieldPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasUsedDownwardAPIFieldPathWithVolume(volume *api.Volume, fieldPath string) bool {
+	if volume == nil {
+		return false
+	}
+	if volume.DownwardAPI != nil {
+		for _, file := range volume.DownwardAPI.Items {
+			if file.FieldRef != nil &&
+				file.FieldRef.FieldPath == fieldPath {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasUsedDownwardAPIFieldPathWithContainer(container *api.Container, fieldPath string) bool {
+	if container == nil {
+		return false
+	}
+	for _, env := range container.Env {
+		if env.ValueFrom != nil &&
+			env.ValueFrom.FieldRef != nil &&
+			env.ValueFrom.FieldRef.FieldPath == fieldPath {
+			return true
+		}
+	}
+	return false
 }
 
 // GetValidationOptionsFromPodTemplate will return pod validation options for specified template.
@@ -512,19 +568,39 @@ func DropDisabledTemplateFields(podTemplate, oldPodTemplate *api.PodTemplateSpec
 func DropDisabledPodFields(pod, oldPod *api.Pod) {
 	var (
 		podSpec           *api.PodSpec
+		podStatus         *api.PodStatus
 		podAnnotations    map[string]string
 		oldPodSpec        *api.PodSpec
+		oldPodStatus      *api.PodStatus
 		oldPodAnnotations map[string]string
 	)
 	if pod != nil {
 		podSpec = &pod.Spec
 		podAnnotations = pod.Annotations
+		podStatus = &pod.Status
 	}
 	if oldPod != nil {
 		oldPodSpec = &oldPod.Spec
 		oldPodAnnotations = oldPod.Annotations
+		oldPodStatus = &oldPod.Status
 	}
 	dropDisabledFields(podSpec, podAnnotations, oldPodSpec, oldPodAnnotations)
+	dropDisabledStatusFields(podStatus, oldPodStatus)
+}
+
+// dropDisabledStatusFields removes disabled fields from the pod status
+func dropDisabledStatusFields(podStatus *api.PodStatus, oldPodStatus *api.PodStatus) {
+	// drop HostIPs to empty (disable PodHostIPs).
+	if !utilfeature.DefaultFeatureGate.Enabled(features.PodHostIPs) && !hostIPsInUse(oldPodStatus) {
+		podStatus.HostIPs = nil
+	}
+}
+
+func hostIPsInUse(podStatus *api.PodStatus) bool {
+	if podStatus == nil {
+		return false
+	}
+	return len(podStatus.HostIPs) > 0
 }
 
 // dropDisabledFields removes disabled fields from the pod metadata and spec.
@@ -571,26 +647,42 @@ func dropDisabledFields(
 		})
 	}
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.PodOverhead) && !overheadInUse(oldPodSpec) {
-		// Set Overhead to nil only if the feature is disabled and it is not used
-		podSpec.Overhead = nil
-	}
-
 	dropDisabledProcMountField(podSpec, oldPodSpec)
 
 	dropDisabledCSIVolumeSourceAlphaFields(podSpec, oldPodSpec)
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.NonPreemptingPriority) &&
-		!podPriorityInUse(oldPodSpec) {
-		// Set to nil pod's PreemptionPolicy fields if the feature is disabled and the old pod
-		// does not specify any values for these fields.
-		podSpec.PreemptionPolicy = nil
-	}
 	if !utilfeature.DefaultFeatureGate.Enabled(features.IdentifyPodOS) && !podOSInUse(oldPodSpec) {
 		podSpec.OS = nil
 	}
 
-	dropDisabledPodAffinityTermFields(podSpec, oldPodSpec)
+	dropDisabledTopologySpreadConstraintsFields(podSpec, oldPodSpec)
+}
+
+// dropDisabledTopologySpreadConstraintsFields removes disabled fields from PodSpec related
+// to TopologySpreadConstraints only if it is not already used by the old spec.
+func dropDisabledTopologySpreadConstraintsFields(podSpec, oldPodSpec *api.PodSpec) {
+	if !utilfeature.DefaultFeatureGate.Enabled(features.MinDomainsInPodTopologySpread) &&
+		!minDomainsInUse(oldPodSpec) &&
+		podSpec != nil {
+		for i := range podSpec.TopologySpreadConstraints {
+			podSpec.TopologySpreadConstraints[i].MinDomains = nil
+		}
+	}
+}
+
+// minDomainsInUse returns true if the pod spec is non-nil
+// and has non-nil MinDomains field in TopologySpreadConstraints.
+func minDomainsInUse(podSpec *api.PodSpec) bool {
+	if podSpec == nil {
+		return false
+	}
+
+	for _, c := range podSpec.TopologySpreadConstraints {
+		if c.MinDomains != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // podOSInUse returns true if the pod spec is non-nil and has OS field set
@@ -631,82 +723,11 @@ func dropDisabledCSIVolumeSourceAlphaFields(podSpec, oldPodSpec *api.PodSpec) {
 	}
 }
 
-func dropPodAffinityTermNamespaceSelector(terms []api.PodAffinityTerm) {
-	for i := range terms {
-		terms[i].NamespaceSelector = nil
-	}
-}
-
-func dropWeightedPodAffinityTermNamespaceSelector(terms []api.WeightedPodAffinityTerm) {
-	for i := range terms {
-		terms[i].PodAffinityTerm.NamespaceSelector = nil
-	}
-}
-
-// dropDisabledPodAffinityTermFields removes disabled fields from PodSpec related
-// to PodAffinityTerm only if it is not already used by the old spec
-func dropDisabledPodAffinityTermFields(podSpec, oldPodSpec *api.PodSpec) {
-	if !utilfeature.DefaultFeatureGate.Enabled(features.PodAffinityNamespaceSelector) &&
-		podSpec != nil && podSpec.Affinity != nil &&
-		!podAffinityNamespaceSelectorInUse(oldPodSpec) {
-		if podSpec.Affinity.PodAffinity != nil {
-			dropPodAffinityTermNamespaceSelector(podSpec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
-			dropWeightedPodAffinityTermNamespaceSelector(podSpec.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
-		}
-		if podSpec.Affinity.PodAntiAffinity != nil {
-			dropPodAffinityTermNamespaceSelector(podSpec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
-			dropWeightedPodAffinityTermNamespaceSelector(podSpec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
-		}
-	}
-}
-
-func podAffinityNamespaceSelectorInUse(podSpec *api.PodSpec) bool {
-	if podSpec == nil || podSpec.Affinity == nil {
-		return false
-	}
-	if podSpec.Affinity.PodAffinity != nil {
-		for _, t := range podSpec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-			if t.NamespaceSelector != nil {
-				return true
-			}
-		}
-		for _, t := range podSpec.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-			if t.PodAffinityTerm.NamespaceSelector != nil {
-				return true
-			}
-		}
-	}
-	if podSpec.Affinity.PodAntiAffinity != nil {
-		for _, t := range podSpec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-			if t.NamespaceSelector != nil {
-				return true
-			}
-		}
-		for _, t := range podSpec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-			if t.PodAffinityTerm.NamespaceSelector == nil {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func ephemeralContainersInUse(podSpec *api.PodSpec) bool {
 	if podSpec == nil {
 		return false
 	}
 	return len(podSpec.EphemeralContainers) > 0
-}
-
-// overheadInUse returns true if the pod spec is non-nil and has Overhead set
-func overheadInUse(podSpec *api.PodSpec) bool {
-	if podSpec == nil {
-		return false
-	}
-	if podSpec.Overhead != nil {
-		return true
-	}
-	return false
 }
 
 // procMountInUse returns true if the pod spec is non-nil and has a SecurityContext's ProcMount field set to a non-default value
@@ -736,17 +757,6 @@ func appArmorInUse(podAnnotations map[string]string) bool {
 		if strings.HasPrefix(k, v1.AppArmorBetaContainerAnnotationKeyPrefix) {
 			return true
 		}
-	}
-	return false
-}
-
-// podPriorityInUse returns true if the pod spec is non-nil and has Priority or PriorityClassName set.
-func podPriorityInUse(podSpec *api.PodSpec) bool {
-	if podSpec == nil {
-		return false
-	}
-	if podSpec.Priority != nil || podSpec.PriorityClassName != "" {
-		return true
 	}
 	return false
 }
