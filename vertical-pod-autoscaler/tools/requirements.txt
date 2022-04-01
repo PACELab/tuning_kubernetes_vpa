@@ -1,0 +1,2 @@
+pip install kubernetes
+pip install pick
