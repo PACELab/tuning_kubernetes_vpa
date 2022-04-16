@@ -1,5 +1,7 @@
 exp_folder=$1
-kubectl apply -f examples/my-rec-vpa-random-35.yaml
+exp_type=$2
+exp_number=$3
+kubectl apply -f examples/my-rec-vpa-random-$2.yaml
 kubectl apply  -f examples/my-rec-deployment-random-35.yaml
 kubectl expose deployment my-rec-deployment-random-35 --type=LoadBalancer --port 80
 port=`kubectl get svc | grep my-rec-deployment-random-35 | awk {'print $5'} | awk -F '[:/]' {'print $2'}`

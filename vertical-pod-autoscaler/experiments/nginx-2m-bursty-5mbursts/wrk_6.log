@@ -1,0 +1,10 @@
+Running 10m test @ http://localhost:32611
+  2 threads and 100 connections
+  Thread calibration: mean lat.: 1.692ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.725ms, rate sampling interval: 10ms
+  Thread Stats   Avg      Stdev     99%   +/- Stdev
+    Latency     1.52ms    1.37ms   6.65ms   87.29%
+    Req/Sec     1.02k     1.05k    3.40k    80.44%
+  1157872 requests in 10.00m, 0.92GB read
+Requests/sec:   1929.78
+Transfer/sec:      1.57MB

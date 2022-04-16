@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-default-bursty
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deployment-default-bursty
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment-default-bursty
+    spec:
+      containers:
+      - image: nginx
+        name: nginx-container-default-bursty
+        resources:
+          limits:
+            cpu: 50m
+          requests:
+            cpu: 25m

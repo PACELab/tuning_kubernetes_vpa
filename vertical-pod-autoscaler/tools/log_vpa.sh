@@ -3,12 +3,13 @@ DEFAULTDURATION=60
 DEFAULTPATH="exp_logs"
 
 total="${2:-$DEFAULTDURATION}"
-folder="exp_logs/${3:-$DEFAULTPAT}"
+folder="${3:-$DEFAULTPATH}"
 mkdir -p $folder
 date=$(date +%Y%m%d%H%M%S)
-log_file="$folder/cpu-$vpa_resource-$date.log"
+log_file="$folder/cpu-$vpa_resource.log"
 
 echo $log_file
 
-for (( i=1; i <= $total; ++i )); do kubectl describe vpa $vpa_resource | egrep -A 1 "  Target:" | grep Cpu | awk {'print $2'} >> $log_file; sleep 60 ; done; 
+i=1
+while [ "$i" -le "$total" ]; do kubectl describe vpa $vpa_resource | egrep -A 1 "  Target:" | grep Cpu | awk {'print $2'} >> $log_file; i=$(( i + 1 ));sleep 30 ; done; 
 
