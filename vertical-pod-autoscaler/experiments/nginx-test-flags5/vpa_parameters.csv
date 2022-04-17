@@ -1,0 +1,3 @@
+subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments 
+recommender,cpu-histogram-decay-half-life,continous,1,48,,24h0m0s,2,hms,--
+recommender,pod-recommendation-min-cpu-millicores,continous,25,1000,,25,100,,--

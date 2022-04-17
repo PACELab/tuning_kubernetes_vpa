@@ -1,0 +1,3 @@
+subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments 
+recommender,cpu-histogram-decay-half-life,continous,1,48,,24h0m0s,2,hms,--
+recommender,recommendation-margin-fraction,continous,0,1,,0.15,0.1,,--

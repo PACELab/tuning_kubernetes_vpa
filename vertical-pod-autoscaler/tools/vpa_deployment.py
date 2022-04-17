@@ -16,6 +16,13 @@ def email_error():
     pass
 
 
+def convert_to_hms(value):
+    hour = int(value)
+    minutes = value % 1 * 100
+    minutes = int(minutes)
+    return "%sh%sm" % (hour, minutes)
+
+
 def update_config(config):
     parameter_meta_df = pd.read_csv("configs/vpa_parameters.csv")
     parameters = parameter_meta_df["parameter"].tolist()
@@ -40,12 +47,12 @@ def update_config(config):
                 recommender_container["args"] = []
             for index, value in enumerate(config):
                 if index == 0:
+                    hms_value = convert_to_hms(value)
                     recommender_container["args"].append(
-                        "%s=6h" % (parameters[index]))
-
+                        "--%s=%s" % (parameters[index], hms_value))
                 else:
                     recommender_container["args"].append(
-                        "%s=%s" % (parameters[index], value))
+                        "--%s=%s" % (parameters[index], value))
     with open(updated_recommender_deployment, "w") as f:
         yaml.dump_all(list(yaml_docs), f)
 

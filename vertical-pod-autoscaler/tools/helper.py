@@ -3,6 +3,7 @@ import sys
 import yaml
 import os
 import subprocess
+import datetime
 
 import pandas as pd
 import numpy as np
@@ -15,10 +16,10 @@ per_load_duration = []
 
 
 def get_init_points_default():
-    return ([24, 24, 24, 8], 100)
+    return ([6,0.15,25], 100)
 
 
-def generate_workload_nginx(version_folder, experiment_version, total_duration, workload_type, new_samples, n_load_changes=4):
+def generate_workload_nginx(version_folder, experiment_version, total_duration, workload_type, new_samples,half_life, n_load_changes=1):
     global loads
     global per_load_duration
     threads = 2
@@ -48,7 +49,7 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
                 loads[burst_rank] = bursty_loads[i]
         else:  # random
             #loads = np.random.normal(2000, 200, n_load_changes)
-            loads = [9985, 10145,  9894 , 10127]
+            loads = [10000]
             per_load_duration = [total_duration //
                                  n_load_changes] * n_load_changes
 
@@ -76,8 +77,8 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         "kubectl get svc | grep %s | awk {'print $5'} | awk -F '[:/]' {'print $2'}" % deployment, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     port = p_object.stdout.decode("ascii")
     os.system("sleep 10")
-    print("tools/log_metrics.sh %s %s %s &" %
-          (deployment, total_duration, version_folder))
+    with open("%s/start_time"%version_folder,"w") as f:
+        f.write(str(datetime.datetime.now()))
     os.system("tools/log_metrics.sh %s %s %s &" %
               (deployment, total_duration, version_folder))
     os.system("tools/log_vpa.sh %s %s %s &" %
@@ -94,33 +95,37 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         total_requests = 0
         if m:
             total_requests = m.group(1)
-        reward += ((load - (total_requests/duration))/load) * duration
+        reward += ((load - (total_requests/duration))/load) + 0.1 * half_life
+        #reward += ((load - (total_requests/duration))/load) * duration
     
-    average_reward = reward/sum(per_load_duration)
+    #average_reward = reward/sum(per_load_duration) 
 
-    #subprocess.run("kubectl delete svc %s" % deployment, shell=True)
-    #subprocess.run("kubectl delete -f %s" % vpa_file_path, shell=True)
-    #subprocess.run("kubectl delete -f %s" %
-    #               deployment_file_path, shell=True)
-
-    return average_reward
-
-
-def generate_workload(version_folder, experiment_version, total_duration,  experiment_type, workload_type, new_samples,):
-    reward = 1000000.
-    if experiment_type == "nginx":
-        reward = generate_workload_nginx(
-            version_folder, experiment_version, total_duration, workload_type, new_samples,)
+    subprocess.run("kubectl delete svc %s" % deployment, shell=True)
+    subprocess.run("kubectl delete -f %s" % vpa_file_path, shell=True)
+    subprocess.run("kubectl delete -f %s" %
+                   deployment_file_path, shell=True)
+    os.system("vpa_evictions > %s/n_vpa_evictions"%version_folder)
     return reward
 
 
-def get_reward(args, model_iteration, config, new_samples=True):
+def generate_workload(version_folder, experiment_version, total_duration,  experiment_type, workload_type, new_samples,half_life):
+    reward = 1000000.
+    if experiment_type == "nginx":
+        reward = generate_workload_nginx(
+            version_folder, experiment_version, total_duration, workload_type, new_samples,half_life)
+    return reward
+
+
+def get_reward(args, model_iteration, config, folder_suffix="", new_samples=True):
     """
     Common API for the optimization algorithms.
     Runs the experiment and returns the reward.
     """
+    destination_folder = str(model_iteration)
+    if folder_suffix:
+        destination_folder += folder_suffix
     version_folder = os.path.join(args.experiment_folder,
-                                  args.experiment_type + "-" + args.experiment_version)
+                                  args.experiment_type + "-" + args.experiment_version,destination_folder)
     try:
         os.mkdir(version_folder)
     except FileExistsError:
@@ -129,11 +134,13 @@ def get_reward(args, model_iteration, config, new_samples=True):
     os.system("cp configs/vpa_parameters.csv %s" % version_folder)
     df = pd.read_csv(version_folder+"/vpa_parameters.csv")
 
+    with open("%s/config.txt"%version_folder,"w") as f:
+        f.write(",".join(list(map(str, config))))
     vpa_deployment.deploy_vpa("localhost", config,)
     modify_deployment_file(version_folder,
                            args.experiment_version, args.experiment_type)
     reward = generate_workload(version_folder, args.experiment_version,
-                               args.experiment_duration, args.experiment_type, args.workload_type, new_samples)
+                               args.experiment_duration, args.experiment_type, args.workload_type, new_samples, config[0])
     return reward
 
 
@@ -194,4 +201,4 @@ def modify_deployment_file_redis(experiment_folder, version):
 
 if __name__ == "__main__":
     args = arguments.argument_parser()
-    get_reward(args, 0, [24, 24, 24, 8], new_samples=True)
+    get_reward(args, 0, [24, 1, 250], new_samples=True)

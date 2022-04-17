@@ -24,7 +24,7 @@ def argument_parser():
     parser.add_argument("--start_sequence", "-ss",
                         help="Starting sequence number", default=1, type=int)
     parser.add_argument("--experiment_duration", "-ed",
-                        help="The duration of the online experiment in minutes", default="3600")
+                        help="The duration of the online experiment in minutes", default="900")
     parser.add_argument("--test", action="store_true",
                         help="Temporary flags that is used to test a feature conditionally.")
     parser.add_argument("--online", action="store_true",

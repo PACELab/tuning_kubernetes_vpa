@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-hl15m-random
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deployment-hl15m-random
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment-hl15m-random
+    spec:
+      containers:
+      - image: nginx
+        name: nginx-container-hl15m-random
+        resources:
+          limits:
+            cpu: 50m
+          requests:
+            cpu: 25m

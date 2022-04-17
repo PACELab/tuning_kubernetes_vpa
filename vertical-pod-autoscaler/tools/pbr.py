@@ -9,7 +9,7 @@ import helper
 
 
 class PBR:
-    def __init__(self, args, sequence_number, parameters_csv_path, delta=1, eta=1):
+    def __init__(self, args, sequence_number, parameters_csv_path, delta=1, eta=2):
         self.args = args
         self.sequence_number = sequence_number
         self.parameters_csv_path = parameters_csv_path
@@ -38,9 +38,11 @@ class PBR:
                 value = config_values[i]/row["step"]
             configs.append(value)
             i += 1
+        print("preprocess default")
+        print(configs)
         return configs
 
-    def init_point(self ):
+    def init_point(self):
         """
         Runs a set of initial points and selects the best of them for the algorithm to start with. This can be done
         using different sampling schemes or static samples.
@@ -112,9 +114,11 @@ class PBR:
         change = self.delta * u
         x_neighbour = (self.x_current +
                        change) if plus else (self.x_current - change)
+        version_folder_suffix = "plus" if plus else "minus"
         x_neighbour_config = self.postprocess(x_neighbour)
-        #reward = helper.get_reward(self.args, x_neighbour_config, new_samples=plus)
-        reward = random.randint(1,10)
+        reward = helper.get_reward(self.args, self.current_config_index,
+                                   x_neighbour_config, folder_suffix=version_folder_suffix, new_samples=plus)
+        #reward = random.randint(1,10)
         return reward
 
     def next_config(self):
@@ -123,16 +127,17 @@ class PBR:
         u = (u/np.linalg.norm(u)).flatten()
         reward_plus = self.get_neighboring_rewards(u)
         reward_minus = self.get_neighboring_rewards(u, plus=False)
+        #reward_plus = 1
+        #reward_minus = 0.9
         x_next = self.x_current - \
-            (self.eta/self.delta)*((reward_plus - reward_minus) /
-                                   np.mean([reward_plus, reward_minus]))*u
+            (self.eta/self.delta)*(reward_plus - reward_minus)*u
         self.x_current = x_next
         return self.postprocess(x_next)
 
     def analysis(self, f_new):
         self.current_config_index += 1
-        if self.current_config_index % 5 == 0:
-            self.eta /= 2
+        # if self.current_config_index % 5 == 0:
+        #    self.eta /= 2
         print("Reward %f" % f_new)
 
 
