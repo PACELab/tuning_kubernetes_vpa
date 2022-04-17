@@ -1,5 +1,6 @@
 import re
 import sys
+from importlib_metadata import version
 import yaml
 import os
 import subprocess
@@ -77,12 +78,13 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         "kubectl get svc | grep %s | awk {'print $5'} | awk -F '[:/]' {'print $2'}" % deployment, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     port = p_object.stdout.decode("ascii")
     os.system("sleep 10")
+    total_duration_m = total_duration //60 + 1 
     with open("%s/start_time"%version_folder,"w") as f:
         f.write(str(datetime.datetime.now()))
     os.system("tools/log_metrics.sh %s %s %s &" %
-              (deployment, total_duration, version_folder))
+              (deployment, total_duration_m, version_folder))
     os.system("tools/log_vpa.sh %s %s %s &" %
-              (vpa, total_duration, version_folder))
+              (vpa, total_duration_m, version_folder))
 
     reward = 0
     for i, (load, duration) in enumerate(zip(loads, per_load_duration)):
@@ -96,10 +98,13 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         if m:
             total_requests = m.group(1)
         reward += ((load - (total_requests/duration))/load) + 0.1 * half_life
+    
         #reward += ((load - (total_requests/duration))/load) * duration
     
     #average_reward = reward/sum(per_load_duration) 
 
+    with open("%s/cost"%version_folder,"w") as f:
+        f.write(str(reward))
     subprocess.run("kubectl delete svc %s" % deployment, shell=True)
     subprocess.run("kubectl delete -f %s" % vpa_file_path, shell=True)
     subprocess.run("kubectl delete -f %s" %
