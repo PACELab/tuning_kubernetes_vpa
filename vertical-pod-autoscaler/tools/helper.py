@@ -130,7 +130,6 @@ def get_reward(args, model_iteration, config, folder_suffix="", new_samples=True
     destination_folder = str(model_iteration)
     if folder_suffix:
         destination_folder += folder_suffix
-
     main_folder = os.path.join(args.experiment_folder, args.experiment_type + "-" + args.experiment_version)
     version_folder = os.path.join(main_folder, destination_folder)
 
@@ -188,6 +187,44 @@ def modify_deployment_file_nginx(version_folder, version, experiment_type):
         experiment_type, version)
     with open(version_folder + "/%s-deployment-%s.yaml" % (experiment_type, version), "w") as dep_f:
         yaml.dump(data, dep_f)
+
+# Specify the skopt domain space for all hyperparameters
+def skopt_space():
+    space = []
+    paramOrder = []
+    header = True
+    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
+
+    # code to create domain space by reading all the hyperparameters and their ranges from csv file
+    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
+    for line in file:
+        # skip the header
+        if header:
+            header = False
+            continue
+
+        contents = line.split(',')
+        # 1 is the index of the parameter
+        param = contents[1]
+        param_type = contents[2]
+        # 1. If categorical
+        if param_type == "categorical":
+            catgs = contents[5].strip().split(';')
+            hyper = Categorical(catgs, name=param)
+            space.append(hyper)
+        # 2. If discrete
+        elif param_type == "discrete":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
+            space.append(hyper)
+        elif param_type == "continous":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Real(float(lower_limit), float(upper_limit), name=param)
+            space.append(hyper)
+        paramOrder.append(param)
+    return [space, paramOrder]
 
 # Specify the skopt domain space for all hyperparameters
 def skopt_space():

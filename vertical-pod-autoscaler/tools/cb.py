@@ -17,10 +17,8 @@ class CBZO:
         self.current_config_index = 0
         self.parameters_meta = self.generate_parameters_meta()
         self.n_actions = int(self.get_n_arms())
-        print(self.n_actions)
         self.vw = pyvw.vw('--cb_explore %d --first %d'%(self.n_actions, self.args.model_iterations//2))
         self.tunable_parameters = self.generate_tunable_parameters_list()
-        print("init done")
     
     def generate_parameters_meta(self):
         """
@@ -112,5 +110,4 @@ if __name__ == "__main__":
         configs = test_object.next_config()
         f_new = test_f(configs)
         test_object.analysis(f_new)
-
 
