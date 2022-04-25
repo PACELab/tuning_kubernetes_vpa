@@ -1,0 +1,3 @@
+subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments 
+recommender,recommendation-margin-fraction,continous,0.15,2,,0.15,1,,-- 
+recommender,pod-recommendation-min-cpu-millicores,discrete,25,1000,,25,100,,--
