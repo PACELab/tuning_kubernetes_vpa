@@ -9,7 +9,7 @@ import helper
 
 
 class PBR:
-    def __init__(self, args, sequence_number, parameters_csv_path, delta=1, eta=2):
+    def __init__(self, args, sequence_number, parameters_csv_path, delta=1, eta=4):
         self.args = args
         self.sequence_number = sequence_number
         self.parameters_csv_path = parameters_csv_path
@@ -123,7 +123,7 @@ class PBR:
 
     def next_config(self):
         n = len(self.x_current)
-        u = np.random.rand(1, n)
+        u = np.random.rand(1, n) * 2 - 1 # sample bw -1 to 1
         u = (u/np.linalg.norm(u)).flatten()
         reward_plus = self.get_neighboring_rewards(u)
         reward_minus = self.get_neighboring_rewards(u, plus=False)
