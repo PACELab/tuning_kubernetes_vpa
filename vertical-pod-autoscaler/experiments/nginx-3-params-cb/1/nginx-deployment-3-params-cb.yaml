@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-3-params-cb
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deployment-3-params-cb
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment-3-params-cb
+    spec:
+      containers:
+      - image: nginx
+        name: nginx-container-3-params-cb
+        resources:
+          limits:
+            cpu: 50m
+          requests:
+            cpu: 25m

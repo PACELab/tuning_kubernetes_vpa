@@ -1,0 +1,11 @@
+Running 15m test @ http://localhost:31799
+  2 threads and 100 connections
+  Thread calibration: mean lat.: 3237.952ms, rate sampling interval: 15179ms
+  Thread calibration: mean lat.: 4312.960ms, rate sampling interval: 16678ms
+  Thread Stats   Avg      Stdev     99%   +/- Stdev
+    Latency     1.60m    19.80s    1.96m    76.36%
+    Req/Sec     4.49k     1.41k    5.51k    87.39%
+  8011046 requests in 15.00m, 6.36GB read
+  Socket errors: connect 0, read 161, write 137, timeout 2352
+Requests/sec:   8901.09
+Transfer/sec:      7.24MB
