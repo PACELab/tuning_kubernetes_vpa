@@ -98,7 +98,7 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         total_requests = 0
         if m:
             total_requests = float(m.group(1))
-        reward += ((load - (total_requests/duration))/load) + 1 * half_life
+        reward += ((load - (total_requests/duration))/load) + 1.0 * half_life
     
         #reward += ((load - (total_requests/duration))/load) * duration
     
@@ -132,10 +132,12 @@ def get_reward(args, model_iteration, config, folder_suffix="", new_samples=True
         destination_folder += folder_suffix
     main_folder = os.path.join(args.experiment_folder, args.experiment_type + "-" + args.experiment_version)
     version_folder = os.path.join(main_folder, destination_folder)
+
     try:
         os.mkdir(main_folder)
     except FileExistsError:
         print("\t\n\nExperiment folder exists already. Do you want to skip (Press Ctrl+c)?\n\n Waiting for 1 minute.")
+
     try:
         os.mkdir(version_folder)
     except FileExistsError:
@@ -186,6 +188,43 @@ def modify_deployment_file_nginx(version_folder, version, experiment_type):
     with open(version_folder + "/%s-deployment-%s.yaml" % (experiment_type, version), "w") as dep_f:
         yaml.dump(data, dep_f)
 
+# Specify the skopt domain space for all hyperparameters
+def skopt_space():
+    space = []
+    paramOrder = []
+    header = True
+    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
+
+    # code to create domain space by reading all the hyperparameters and their ranges from csv file
+    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
+    for line in file:
+        # skip the header
+        if header:
+            header = False
+            continue
+
+        contents = line.split(',')
+        # 1 is the index of the parameter
+        param = contents[1]
+        param_type = contents[2]
+        # 1. If categorical
+        if param_type == "categorical":
+            catgs = contents[5].strip().split(';')
+            hyper = Categorical(catgs, name=param)
+            space.append(hyper)
+        # 2. If discrete
+        elif param_type == "discrete":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
+            space.append(hyper)
+        elif param_type == "continous":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Real(float(lower_limit), float(upper_limit), name=param)
+            space.append(hyper)
+        paramOrder.append(param)
+    return [space, paramOrder]
 
 # Specify the skopt domain space for all hyperparameters
 def skopt_space():
@@ -249,4 +288,4 @@ def modify_deployment_file_redis(experiment_folder, version):
 
 if __name__ == "__main__":
     args = arguments.argument_parser()
-    get_reward(args, 0, [24, 1, 250], new_samples=True)
+    get_reward(args, 0, [6,0.15,25], folder_suffix="", new_samples=True)

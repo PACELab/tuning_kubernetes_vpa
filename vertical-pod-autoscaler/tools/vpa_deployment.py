@@ -45,6 +45,8 @@ def update_config(config):
             # pass args to recommender container.
             if "args" not in recommender_container:
                 recommender_container["args"] = []
+            # keep half life at 15m
+            #recommender_container["args"].append("--cpu-histogram-decay-half-life=15m")
             for index, value in enumerate(config):
                 if index == 0:
                     hms_value = convert_to_hms(value)

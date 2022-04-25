@@ -4,6 +4,7 @@ import random
 
 import helper
 import pbr
+import cb
 import bayesopt
 import arguments
 
@@ -26,6 +27,9 @@ if __name__ == "__main__":
     for sequence_number in range(args.start_sequence, args.sequence_count+1):
         if args.approach == "PBR":
             approach_instance = pbr.PBR(args, sequence_number, "configs/vpa_parameters.csv")
+            run_algorithm(args)
+        elif args.approach == "CB":
+            approach_instance = cb.CBZO(args, "configs/vpa_parameters.csv")
             run_algorithm(args)
         elif args.approach.startswith("bayesopt"):
             approach_instance = bayesopt.BayesianOptimization(args)

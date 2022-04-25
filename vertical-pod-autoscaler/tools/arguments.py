@@ -33,8 +33,8 @@ def argument_parser():
                         help="The interval at which the config is changed", default="3")
     parser.add_argument("--init", action="store_true",
                         help="Initialize the algorithm with user supplied points instead of library generated random samples.")
-    parser.add_argument("--init_default", action="store_true",
-                        help="Initialize the algorithm with default values for the parameters.")
     parser.add_argument(
         "--acq_func", "-a", help="The acquisition function to be used with Bayesian methods", default="EI")
+    parser.add_argument("--init_default", action="store_true",
+                        help="Initialize the algorithm with default values for the parameters.")
     return parser.parse_args()

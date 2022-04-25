@@ -1,5 +1,4 @@
 from vowpalwabbit import pyvw
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sys
@@ -11,16 +10,15 @@ import helper
 
 
 class CBZO:
-    def __init__(self, args ): 
+    def __init__(self, args , parameters_csv): 
         print(args)
         self.args = args
+        self.parameters_csv_path = parameters_csv
         self.current_config_index = 0
         self.parameters_meta = self.generate_parameters_meta()
-        self.n_actions = self.get_n_arms()
-        print(self.n_actions)
+        self.n_actions = int(self.get_n_arms())
         self.vw = pyvw.vw('--cb_explore %d --first %d'%(self.n_actions, self.args.model_iterations//2))
         self.tunable_parameters = self.generate_tunable_parameters_list()
-        print("init done")
     
     def generate_parameters_meta(self):
         """
@@ -33,7 +31,7 @@ class CBZO:
     def get_n_arms(self):
         n_arms = 1
         for _, row in self.parameters_meta.iterrows():
-            n_arms *= (row["lower_limit"] - row["lower_limit"]) // row["step"]
+            n_arms *= (row["upper_limit"] - row["lower_limit"]) // row["step"]
         return n_arms
     
 
@@ -67,8 +65,8 @@ class CBZO:
         reversed_params_meta_df = self.parameters_meta[::-1].reset_index(drop=True) # O(1) op
         configs = [None] * len(reversed_params_meta_df)
         i = len(reversed_params_meta_df) - 1
-        for _, row in enumerate(reversed_params_meta_df.iterrows()):
-            n_values = (row["lower_limit"] - row["lower_limit"]) // row["step"] 
+        for _, row in reversed_params_meta_df.iterrows():
+            n_values = (row["upper_limit"] - row["lower_limit"]) // row["step"] 
             position = self.action % n_values
             configs[i] = row["lower_limit"] + position * row["step"]
             if configs[i] > row["upper_limit"]:
