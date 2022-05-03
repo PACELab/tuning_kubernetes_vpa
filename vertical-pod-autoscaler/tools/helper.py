@@ -1,6 +1,7 @@
 import re
 import sys
 from importlib_metadata import version
+from numpy import percentile
 import yaml
 import os
 import subprocess
@@ -8,7 +9,7 @@ import datetime
 
 import pandas as pd
 import numpy as np
-from skopt.space import Integer, Real, Categorical
+
 
 import vpa_deployment
 import arguments
@@ -18,10 +19,48 @@ per_load_duration = []
 
 
 def get_init_points_default():
-    return ([5.68,0.28,418], 5.88) # reward used it deficit + 1 * half-life
+    return ([5.68, 0.28, 418], 5.88)  # reward used it deficit + 1 * half-life
 
 
-def generate_workload_nginx(version_folder, experiment_version, total_duration, workload_type, new_samples,half_life, n_load_changes=1):
+def generate_workload_sn(version_folder, experiment_version, total_duration, workload_type, new_samples, half_life, n_load_changes=1):
+    n_threads = 2
+    n_connections = 4
+    duration = 120
+    port = 8080
+    frontend_cluster_ip = ""
+    compose_rps = 50
+    home_rps = 350
+    user_rps = 150
+    percentile = 95
+
+
+    os.system("kubectl apply -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/social-network-ns.yaml")
+    os.system("kubectl apply -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/")
+
+    os.system("sleep 120")
+
+    frontend_cluster_ip = subprocess.run("kubectl get svc nginx-thrift -n social-network -ojsonpath='{{.spec.clusterIP}}'", stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())
+    print("Frontend cluster IP", frontend_cluster_ip)
+
+    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/compose_latencies.txt -L -s ./wrk2/scripts/social-network/compose-post.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {compose_rps} > {version_folder}/compose.log &")
+    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/home_latencies.txt -L -s ./wrk2/scripts/social-network/read-home-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {home_rps} > {version_folder}/home.log &")
+    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/user_latencies.txt -L -s ./wrk2/scripts/social-network/read-user-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {user_rps} > {version_folder}/user.log &")
+
+    reward = subprocess.run(" cat {version_folder}/*_latencies.txt | datamash perc:{percentile} 1 > {version_folder}/cost", stdout=subprocess.PIPE, shell=True)
+
+    try:
+        # microseconds to milliseconds
+        reward = float(reward.stdout)/1000
+    except:
+        # TODO: send email
+        reward = 10000.0
+    os.system("kubectl delete -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/")
+    os.system("kubectl delete -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/social-network-ns.yaml")
+
+    return reward
+
+
+def generate_workload_nginx(version_folder, experiment_version, total_duration, workload_type, new_samples, half_life, n_load_changes=1):
     global loads
     global per_load_duration
     threads = 2
@@ -31,7 +70,7 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
     if new_samples:
         if workload_type == "diurnal":
             #loads = np.random.normal(2000, 200, n_load_changes)
-            loads = [9985, 10145,  9894 , 10127]
+            loads = [9985, 10145,  9894, 10127]
             per_load_duration = [total_duration //
                                  n_load_changes] * n_load_changes
         elif workload_type == "bursty":
@@ -79,8 +118,8 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         "kubectl get svc | grep %s | awk {'print $5'} | awk -F '[:/]' {'print $2'}" % deployment, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     port = p_object.stdout.decode("ascii")
     os.system("sleep 10")
-    total_duration_m = total_duration //60 + 1 
-    with open("%s/start_time"%version_folder,"w") as f:
+    total_duration_m = total_duration // 60 + 1
+    with open("%s/start_time" % version_folder, "w") as f:
         f.write(str(datetime.datetime.now()))
     os.system("tools/log_metrics.sh %s %s %s &" %
               (deployment, total_duration_m, version_folder))
@@ -99,26 +138,30 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
         if m:
             total_requests = float(m.group(1))
         reward += ((load - (total_requests/duration))/load) + 1.0 * half_life
-    
-        #reward += ((load - (total_requests/duration))/load) * duration
-    
-    #average_reward = reward/sum(per_load_duration) 
 
-    with open("%s/cost"%version_folder,"w") as f:
+        #reward += ((load - (total_requests/duration))/load) * duration
+
+    #average_reward = reward/sum(per_load_duration)
+
+    with open("%s/cost" % version_folder, "w") as f:
         f.write(str(reward))
     subprocess.run("kubectl delete svc %s" % deployment, shell=True)
     subprocess.run("kubectl delete -f %s" % vpa_file_path, shell=True)
     subprocess.run("kubectl delete -f %s" %
                    deployment_file_path, shell=True)
-    os.system("kubectl get pods -n kube-system | grep updater | awk {'print $1'} | xargs kubectl logs -n kube-system | grep EvictedByVPA > %s/n_vpa_evictions"%version_folder)
+    os.system(
+        "kubectl get pods -n kube-system | grep updater | awk {'print $1'} | xargs kubectl logs -n kube-system | grep EvictedByVPA > %s/n_vpa_evictions" % version_folder)
     return reward
 
 
-def generate_workload(version_folder, experiment_version, total_duration,  experiment_type, workload_type, new_samples,half_life):
+def generate_workload(version_folder, experiment_version, total_duration,  experiment_type, workload_type, new_samples, half_life):
     reward = 1000000.
     if experiment_type == "nginx":
         reward = generate_workload_nginx(
-            version_folder, experiment_version, total_duration, workload_type, new_samples,half_life)
+            version_folder, experiment_version, total_duration, workload_type, new_samples, half_life)
+    elif experiment_type == "sn":
+        reward = generate_workload_sn(
+            version_folder, experiment_version, total_duration, workload_type, new_samples, half_life)
     return reward
 
 
@@ -130,7 +173,8 @@ def get_reward(args, model_iteration, config, folder_suffix="", new_samples=True
     destination_folder = str(model_iteration)
     if folder_suffix:
         destination_folder += folder_suffix
-    main_folder = os.path.join(args.experiment_folder, args.experiment_type + "-" + args.experiment_version)
+    main_folder = os.path.join(
+        args.experiment_folder, args.experiment_type + "-" + args.experiment_version)
     version_folder = os.path.join(main_folder, destination_folder)
 
     try:
@@ -146,7 +190,7 @@ def get_reward(args, model_iteration, config, folder_suffix="", new_samples=True
     os.system("cp configs/vpa_parameters.csv %s" % version_folder)
     df = pd.read_csv(version_folder+"/vpa_parameters.csv")
 
-    with open("%s/config.txt"%version_folder,"w") as f:
+    with open("%s/config.txt" % version_folder, "w") as f:
         f.write(",".join(list(map(str, config))))
     vpa_deployment.deploy_vpa("localhost", config,)
     modify_deployment_file(version_folder,
@@ -188,104 +232,7 @@ def modify_deployment_file_nginx(version_folder, version, experiment_type):
     with open(version_folder + "/%s-deployment-%s.yaml" % (experiment_type, version), "w") as dep_f:
         yaml.dump(data, dep_f)
 
-# Specify the skopt domain space for all hyperparameters
-def skopt_space():
-    space = []
-    paramOrder = []
-    header = True
-    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
-
-    # code to create domain space by reading all the hyperparameters and their ranges from csv file
-    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
-    for line in file:
-        # skip the header
-        if header:
-            header = False
-            continue
-
-        contents = line.split(',')
-        # 1 is the index of the parameter
-        param = contents[1]
-        param_type = contents[2]
-        # 1. If categorical
-        if param_type == "categorical":
-            catgs = contents[5].strip().split(';')
-            hyper = Categorical(catgs, name=param)
-            space.append(hyper)
-        # 2. If discrete
-        elif param_type == "discrete":
-            lower_limit = contents[3]
-            upper_limit = contents[4]
-            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
-            space.append(hyper)
-        elif param_type == "continous":
-            lower_limit = contents[3]
-            upper_limit = contents[4]
-            hyper = Real(float(lower_limit), float(upper_limit), name=param)
-            space.append(hyper)
-        paramOrder.append(param)
-    return [space, paramOrder]
-
-# Specify the skopt domain space for all hyperparameters
-def skopt_space():
-    space = []
-    paramOrder = []
-    header = True
-    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
-
-    # code to create domain space by reading all the hyperparameters and their ranges from csv file
-    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
-    for line in file:
-        # skip the header
-        if header:
-            header = False
-            continue
-
-        contents = line.split(',')
-        # 1 is the index of the parameter
-        param = contents[1]
-        param_type = contents[2]
-        # 1. If categorical
-        if param_type == "categorical":
-            catgs = contents[5].strip().split(';')
-            hyper = Categorical(catgs, name=param)
-            space.append(hyper)
-        # 2. If discrete
-        elif param_type == "discrete":
-            lower_limit = contents[3]
-            upper_limit = contents[4]
-            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
-            space.append(hyper)
-        elif param_type == "continous":
-            lower_limit = contents[3]
-            upper_limit = contents[4]
-            hyper = Real(float(lower_limit), float(upper_limit), name=param)
-            space.append(hyper)
-        paramOrder.append(param)
-    return [space, paramOrder]
-
-"""
-def modify_deployment_file_redis(experiment_folder, version):
-  # create a different vpa file.
-  with open("examples/redis-vpa-template.yaml") as redis_vpa_f:
-    data = yaml.load(redis_vpa_f)
-  data['metadata']['name'] = "redis-vpa-%d"%version
-  data['spec']['targetRef']['name'] = "redis-master-%d"%version
-  with open(experiment_folder + "/redis-vpa-%d.yaml"%version,"w") as redis_vpa_f:
-    yaml.dump(data, redis_vpa_f) 
-
-  # create a different deployment file.
-  with open(experiment_folder + "/redis-deployment-template.yaml") as redis_deployment_f:
-    data = yaml.load(redis_deployment_f)
-  data["metadata"]["name"] = "redis-master-%d"%version
-  data["metadata"]["labels"]["app"] = "redis-%d"%version
-  data["spec"]["selector"]["matchLabels"]["app"] = "redis-%d"%version
-  data["spec"]["template"]["metadata"]["labels"]["app"] = "redis-%d"%version
-  data["spec"]["template"]["spec"]["containers"][0]["name"] = "master-%d"%version
-  with open(experiment_folder + "/redis-deployment-%d.yaml"%version,"w") as redis_dep_f:
-    yaml.dump(data, redis_dep_f) 
-  """
 
 if __name__ == "__main__":
     args = arguments.argument_parser()
-    get_reward(args, 0, [6,0.15,25], folder_suffix="", new_samples=True)
+    get_reward(args, 0, [6, 0.15, 25], folder_suffix="", new_samples=True)

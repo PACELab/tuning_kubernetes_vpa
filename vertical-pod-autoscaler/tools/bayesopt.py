@@ -5,6 +5,7 @@ pip install scikit-optimize
 from skopt.utils import use_named_args
 from skopt import gp_minimize, gbrt_minimize, forest_minimize
 from timeit import default_timer as timer
+from skopt.space import Integer, Real, Categorical
 import os
 import sys
 
@@ -18,7 +19,7 @@ class BayesianOptimization:
         # index of the current configuration. -1 before the method starts.
         self.current_model_iteration = current_model_iteration
         # domain space for BO using skopt library. verison and app code are the input
-        self.domain_space = helper.skopt_space()
+        self.domain_space = skopt_space()
         self.surrogate_model = {"gp": gp_minimize, "gbrt": gbrt_minimize,
                                 "forest": forest_minimize}[args.approach.split('-')[1]]
         self.total_time = 0
@@ -74,3 +75,79 @@ class BayesianOptimization:
         print("Optimization time per iteration %f" %
               (self.total_time/self.args.model_iterations))
         return result
+
+# Specify the skopt domain space for all hyperparameters
+def skopt_space():
+    space = []
+    paramOrder = []
+    header = True
+    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
+
+    # code to create domain space by reading all the hyperparameters and their ranges from csv file
+    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
+    for line in file:
+        # skip the header
+        if header:
+            header = False
+            continue
+
+        contents = line.split(',')
+        # 1 is the index of the parameter
+        param = contents[1]
+        param_type = contents[2]
+        # 1. If categorical
+        if param_type == "categorical":
+            catgs = contents[5].strip().split(';')
+            hyper = Categorical(catgs, name=param)
+            space.append(hyper)
+        # 2. If discrete
+        elif param_type == "discrete":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
+            space.append(hyper)
+        elif param_type == "continous":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Real(float(lower_limit), float(upper_limit), name=param)
+            space.append(hyper)
+        paramOrder.append(param)
+    return [space, paramOrder]
+
+# Specify the skopt domain space for all hyperparameters
+def skopt_space():
+    space = []
+    paramOrder = []
+    header = True
+    file = open('/home/ubuntu/autoscaler/vertical-pod-autoscaler/configs/vpa_parameters.csv')
+
+    # code to create domain space by reading all the hyperparameters and their ranges from csv file
+    # parameter file headers: subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments
+    for line in file:
+        # skip the header
+        if header:
+            header = False
+            continue
+
+        contents = line.split(',')
+        # 1 is the index of the parameter
+        param = contents[1]
+        param_type = contents[2]
+        # 1. If categorical
+        if param_type == "categorical":
+            catgs = contents[5].strip().split(';')
+            hyper = Categorical(catgs, name=param)
+            space.append(hyper)
+        # 2. If discrete
+        elif param_type == "discrete":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Integer(int(lower_limit), int(upper_limit), name=param)
+            space.append(hyper)
+        elif param_type == "continous":
+            lower_limit = contents[3]
+            upper_limit = contents[4]
+            hyper = Real(float(lower_limit), float(upper_limit), name=param)
+            space.append(hyper)
+        paramOrder.append(param)
+    return [space, paramOrder]
