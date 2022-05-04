@@ -122,15 +122,18 @@ class PBR:
         return reward
 
     def next_config(self):
+        normalization_factor = 1
+        normalize = ["sn"] # experiment types for which the reward is such that normalization is required.
+
         n = len(self.x_current)
         u = np.random.rand(1, n) * 2 - 1 # sample bw -1 to 1
         u = (u/np.linalg.norm(u)).flatten()
         reward_plus = self.get_neighboring_rewards(u)
         reward_minus = self.get_neighboring_rewards(u, plus=False)
-        #reward_plus = 1
-        #reward_minus = 0.9
+        if self.args.experiment_type in normalize:
+            normalization_factor = (reward_plus + reward_minus)/2
         x_next = self.x_current - \
-            (self.eta/self.delta)*(reward_plus - reward_minus)*u
+            (self.eta/self.delta)*((reward_plus - reward_minus)/normalization_factor)*u
         self.x_current = x_next
         return self.postprocess(x_next)
 
