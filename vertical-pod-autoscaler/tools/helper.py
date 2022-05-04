@@ -32,6 +32,7 @@ def generate_workload_sn(version_folder, experiment_version, total_duration, wor
     home_rps = 350
     user_rps = 150
     percentile = 95
+    wrk2_folder = "/home/ubuntu/uservices/uservices-perf-analysis"
 
 
     os.system("kubectl apply -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/social-network-ns.yaml")
@@ -39,14 +40,17 @@ def generate_workload_sn(version_folder, experiment_version, total_duration, wor
 
     os.system("sleep 120")
 
-    frontend_cluster_ip = subprocess.run("kubectl get svc nginx-thrift -n social-network -ojsonpath='{{.spec.clusterIP}}'", stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())
+    p = subprocess.run(f"kubectl get svc nginx-thrift -n social-network -ojsonpath='{{.spec.clusterIP}}'", stdout=subprocess.PIPE, shell=True)
+    print(p)
+    frontend_cluster_ip = p.stdout.decode("ascii").strip()
     print("Frontend cluster IP", frontend_cluster_ip)
 
-    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/compose_latencies.txt -L -s ./wrk2/scripts/social-network/compose-post.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {compose_rps} > {version_folder}/compose.log &")
-    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/home_latencies.txt -L -s ./wrk2/scripts/social-network/read-home-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {home_rps} > {version_folder}/home.log &")
-    os.system(f"wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d %{duration} -P {version_folder}/user_latencies.txt -L -s ./wrk2/scripts/social-network/read-user-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {user_rps} > {version_folder}/user.log &")
-
-    reward = subprocess.run(" cat {version_folder}/*_latencies.txt | datamash perc:{percentile} 1 > {version_folder}/cost", stdout=subprocess.PIPE, shell=True)
+    os.system(f"{wrk2_folder}/wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d {duration} -P {version_folder}/compose_latencies.txt -L -s {wrk2_folder}/wrk2/scripts/social-network/compose-post.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {compose_rps} > {version_folder}/compose.log &")
+    os.system(f"{wrk2_folder}/wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d {duration} -P {version_folder}/home_latencies.txt -L -s {wrk2_folder}/wrk2/scripts/social-network/read-home-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {home_rps} > {version_folder}/home.log &")
+    os.system(f"{wrk2_folder}/wrk2/wrk -D exp -t {n_threads} -c {n_connections} -d {duration} -P {version_folder}/user_latencies.txt -L -s {wrk2_folder}/wrk2/scripts/social-network/read-user-timeline.lua http://{frontend_cluster_ip}:{port}/wrk2-api/post/compose -R {user_rps} > {version_folder}/user.log &")
+    
+    os.system(f"sleep {duration+30}")
+    reward = subprocess.run(f"cat {version_folder}/*_latencies.txt | datamash perc:{percentile} 1 > {version_folder}/cost", stdout=subprocess.PIPE, shell=True)
 
     try:
         # microseconds to milliseconds
@@ -54,8 +58,10 @@ def generate_workload_sn(version_folder, experiment_version, total_duration, wor
     except:
         # TODO: send email
         reward = 10000.0
+    sys.exit()
     os.system("kubectl delete -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/")
     os.system("kubectl delete -f /home/ubuntu/firm/benchmarks/1-social-network/k8s-yaml/social-network-ns.yaml")
+    write_n_vpa_evictions(version_folder)
 
     return reward
 
@@ -149,9 +155,12 @@ def generate_workload_nginx(version_folder, experiment_version, total_duration, 
     subprocess.run("kubectl delete -f %s" % vpa_file_path, shell=True)
     subprocess.run("kubectl delete -f %s" %
                    deployment_file_path, shell=True)
+    write_n_vpa_evictions(version_folder)
+    return reward
+
+def write_n_vpa_evictions(version_folder):
     os.system(
         "kubectl get pods -n kube-system | grep updater | awk {'print $1'} | xargs kubectl logs -n kube-system | grep EvictedByVPA > %s/n_vpa_evictions" % version_folder)
-    return reward
 
 
 def generate_workload(version_folder, experiment_version, total_duration,  experiment_type, workload_type, new_samples, half_life):
