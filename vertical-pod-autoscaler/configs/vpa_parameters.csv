@@ -1,4 +1,4 @@
 subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments 
 recommender,cpu-histogram-decay-half-life,continous,0.01,6,,24h0m0s,1,hms,--
 recommender,recommendation-margin-fraction,continous,0.15,2,,0.15,1,,-- 
-recommender,pod-recommendation-min-cpu-millicores,discrete,25,1000,,25,100,,--
+recommender,pod-recommendation-min-cpu-millicores,discrete,25,500,,25,100,,--
