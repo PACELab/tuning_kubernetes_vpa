@@ -9,8 +9,9 @@ import helper
 
 
 class PBR:
-    def __init__(self, args, sequence_number, parameters_csv_path, delta=1, eta=4):
+    def __init__(self, args, experiment_version_folder, sequence_number, parameters_csv_path, delta=1, eta=4):
         self.args = args
+        self.experiment_version_folder = experiment_version_folder
         self.sequence_number = sequence_number
         self.parameters_csv_path = parameters_csv_path
         self.delta = delta
@@ -94,7 +95,6 @@ class PBR:
         for _, row in self.parameters_meta.iterrows():
             if row["type"] == "categorical":  # categorical
                 # for categorical, the value being tuned is the rounded index in the list of allowed values
-                # index 6 of the meta data structure has the list of allowed values
                 rounded_index = round(x_next[index])
                 rounded_index = check_range_and_adjust(
                     rounded_index, 0, len(row["categorical_values"]))
@@ -108,6 +108,8 @@ class PBR:
                     rescaled_value, row["lower_limit"], row["upper_limit"])
                 configs.append(rescaled_value)
             index += 1
+        print("x_next after post process")
+        print(configs)
         return configs
 
     def get_neighboring_rewards(self, u, plus=True):
@@ -116,15 +118,14 @@ class PBR:
                        change) if plus else (self.x_current - change)
         version_folder_suffix = "plus" if plus else "minus"
         x_neighbour_config = self.postprocess(x_neighbour)
-        reward = helper.get_reward(self.args, self.current_config_index,
+        reward = helper.get_reward(self.args, self.experiment_version_folder, self.current_config_index, 
                                    x_neighbour_config, folder_suffix=version_folder_suffix, new_samples=plus)
-        #reward = random.randint(1,10)
+        #reward = random.randint(80,100)
         return reward
 
     def next_config(self):
         normalization_factor = 1
         normalize = ["sn"] # experiment types for which the reward is such that normalization is required.
-
         n = len(self.x_current)
         u = np.random.rand(1, n) * 2 - 1 # sample bw -1 to 1
         u = (u/np.linalg.norm(u)).flatten()
@@ -134,7 +135,18 @@ class PBR:
             normalization_factor = (reward_plus + reward_minus)/2
         x_next = self.x_current - \
             (self.eta/self.delta)*((reward_plus - reward_minus)/normalization_factor)*u
+        
+        #write_debug_info(self.x_current)
+        print("debug info")
+        print(self.x_current)
+        print(self.eta/self.delta)
+        print(reward_plus)
+        print(reward_minus)
+        print(normalization_factor)
+        print(u)
         self.x_current = x_next
+        print("x_next Before postprocess")
+        print(x_next)
         return self.postprocess(x_next)
 
     def analysis(self, f_new):

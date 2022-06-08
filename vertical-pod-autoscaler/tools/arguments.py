@@ -9,7 +9,7 @@ def argument_parser():
         "--control_plane", help="The IP of the kubernetes control plane", default="localhost")
     parser.add_argument("--experiment_version", "-v", "-V",
                         help="The version of the experiment")
-    parser.add_argument("--experiment_folder", "-ef",
+    parser.add_argument("--results_folder", "-rf",
                         help="The root folder where all the results are stored.", default="/home/ubuntu/autoscaler/vertical-pod-autoscaler/experiments")
     parser.add_argument("--experiment_iterations", "-ei",
                         help="The number of times the experiment is repeated for a given algorithm and config (0th iteration is run for cache warm-up", default=1, type=int)
@@ -37,4 +37,6 @@ def argument_parser():
         "--acq_func", "-a", help="The acquisition function to be used with Bayesian methods", default="EI")
     parser.add_argument("--init_default", action="store_true",
                         help="Initialize the algorithm with default values for the parameters.")
+    parser.add_argument("--vpa", action="store_true",
+                        help="Do not create VPA objects.")
     return parser.parse_args()
