@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-sn-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deployment-sn-test
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment-sn-test
+    spec:
+      containers:
+      - image: nginx
+        name: nginx-container-sn-test
+        resources:
+          limits:
+            cpu: 50m
+          requests:
+            cpu: 25m
