@@ -1,8 +1,8 @@
 subsystem,parameter,type,lower_limit,upper_limit,categorical_values,default,step,units,prefix,comments 
-recommender,cpu-histogram-decay-half-life,continous,1,48,,24h0m0s,2,hms,--
-recommender,recommendation-margin-fraction,continous,0,1,,0.15,0.1,,--
-recommender,memory-histogram-decay-half-life,continous,1,48,,24h0m0s,2,hms,--
-recommender,memory-aggregation-interval,continous,1,48,,24h0m0s,2,hms,--
-recommender,memory-aggregation-interval-count,continous,1,16,,8,1,hms,--
+recommender,cpu-histogram-decay-half-life,continuous,1,48,,24h0m0s,2,hms,--
+recommender,recommendation-margin-fraction,continuous,0,1,,0.15,0.1,,--
+recommender,memory-histogram-decay-half-life,contiunous,1,48,,24h0m0s,2,hms,--
+recommender,memory-aggregation-interval,continuous,1,48,,24h0m0s,2,hms,--
+recommender,memory-aggregation-interval-count,continuous,1,16,,8,1,hms,--
 recommender,pod-recommendation-min-cpu-millicores,discrete,25,1000,,25,100,,--
 
