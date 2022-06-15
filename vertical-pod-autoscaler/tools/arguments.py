@@ -7,6 +7,8 @@ def argument_parser():
         "--approach", help="The optimization algorithm to be used", default="PBR")
     parser.add_argument(
         "--control_plane", help="The IP of the kubernetes control plane", default="localhost")
+    parser.add_argument(
+        "--repo_parent_path", help="The location where the repository has been cloned.", default="/home/ubuntu/")
     parser.add_argument("--experiment_version", "-v", "-V",
                         help="The version of the experiment")
     parser.add_argument("--results_folder", "-rf",

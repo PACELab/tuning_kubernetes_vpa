@@ -106,7 +106,7 @@ def skopt_space():
             upper_limit = contents[4]
             hyper = Integer(int(lower_limit), int(upper_limit), name=param)
             space.append(hyper)
-        elif param_type == "continous":
+        elif param_type == "continuous":
             lower_limit = contents[3]
             upper_limit = contents[4]
             hyper = Real(float(lower_limit), float(upper_limit), name=param)
@@ -144,7 +144,7 @@ def skopt_space():
             upper_limit = contents[4]
             hyper = Integer(int(lower_limit), int(upper_limit), name=param)
             space.append(hyper)
-        elif param_type == "continous":
+        elif param_type == "continuous":
             lower_limit = contents[3]
             upper_limit = contents[4]
             hyper = Real(float(lower_limit), float(upper_limit), name=param)

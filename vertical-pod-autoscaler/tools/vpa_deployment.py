@@ -25,6 +25,8 @@ def convert_to_hms(value):
 
 def update_config(config):
     parameter_meta_df = pd.read_csv("configs/vpa_parameters.csv")
+
+    # TODO: update the parameters based on the subsystem
     parameters = parameter_meta_df["parameter"].tolist()
     home = os.path.expanduser("~")
     recommender_deployment_default = home + \

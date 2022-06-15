@@ -1,6 +1,5 @@
 import re
 import sys
-from importlib_metadata import version
 from numpy import percentile
 import yaml
 import os
