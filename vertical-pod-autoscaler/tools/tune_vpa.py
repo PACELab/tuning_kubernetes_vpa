@@ -56,6 +56,7 @@ def postprocess(parameters_meta, action):
             index += 1
         return configs
 
+#TODO: not using this variable
 NUM_STATE_FEATURES=2
 def ddpg_helper(parameters_file):
         # env_name = ['Pendulum-v1']
@@ -63,8 +64,12 @@ def ddpg_helper(parameters_file):
     # env = gym.make(env_name[env_index])
     # env_evaluate = gym.make(env_name[env_index])  # When evaluating the policy, we need to rebuild an environment
     number = 1
-    env = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES, parameters_file=parameters_file, args=args)
-    env_evaluate = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES,  parameters_file=parameters_file, args=args)
+    if args.experiment_type == "nginx":
+        env = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES, num_micro=1, num_worker_nodes=1, num_tunable_parameters=3, num_request_types=1, parameters_file=parameters_file, args=args)
+        env_evaluate = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES, num_micro=1, num_worker_nodes=1, num_tunable_parameters=3, num_request_types=1, parameters_file=parameters_file, args=args)
+    elif args.experiment_type == "sn":
+        env = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES, parameters_file=parameters_file, args=args)
+        env_evaluate = ContainerizedEnv.ContainerEnv(num_features=NUM_STATE_FEATURES,  parameters_file=parameters_file, args=args)
     # Set random seed
     seed = 0
     env.seed(seed)
@@ -76,8 +81,6 @@ def ddpg_helper(parameters_file):
     parameters_meta = pd.read_csv(parameters_file)
     upper_limits = parameters_meta["upper_limit"].values
     lower_limits = parameters_meta["lower_limit"].values 
-    print(upper_limits)
-    print(lower_limits)
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
@@ -100,8 +103,8 @@ def ddpg_helper(parameters_file):
     # random_steps = 200  # Take the random actions in the beginning for the better exploration
     # update_freq = 50  # Take 50 steps,then update the networks 50 times
     # evaluate_freq = 5   
-    max_train_steps = 50  # Maximum number of training steps
-    random_steps = 25  # Take the random actions in the beginning for the better exploration
+    max_train_steps = args.model_iterations  # Maximum number of training steps
+    random_steps = args.model_iterations//2  # Take the random actions in the beginning for the better exploration
     update_freq = 5  # Take 50 steps,then update the networks 50 times
     # evaluate_freq = 1  # Evaluate the policy every 'evaluate_freq' steps
     # evaluate_num = 0  # Record the number of evaluations
@@ -125,9 +128,8 @@ def ddpg_helper(parameters_file):
                 # Add Gaussian noise to actions for exploration
                 epsilon = epsilon*(epsilon_decay**(total_steps/100))
                 a = agent.choose_action(s)
-                print(a)
                 a = (a + np.random.normal(0, epsilon * upper_limits, size=action_dim)).clip(lower_limits, upper_limits)
-                print(postprocess(parameters_meta, a))
+                a = postprocess(parameters_meta, a)
             s_, r, done, _ = env.step(a)
             #print("Current step: ", env.current_step)
             # scales reward to converge
@@ -153,11 +155,22 @@ def ddpg_helper(parameters_file):
             stats.episode_lengths[total_steps] = max_episode_steps
             # Evaluate the policy every 'evaluate_freq' steps
             total_steps += 1
+    
+    # get best config
+    # change to env_evaluate if episode length is more than 1
+    evaluate_policy(env, agent, parameters_meta)
     fig1,fig2,fig3 = plotting.plot_episode_stats(stats, smoothing_window=50)
     fig1.savefig("vpa_ddpgfig1.png")
     fig2.savefig("vpa_ddpgfig2-10.png")
     fig3.savefig("vpa_ddpgfig3.png")
-    
+
+def evaluate_policy(env, agent, parameters_meta):
+    s = env.reset()
+    a = agent.choose_action(s)  # We do not add noise when evaluating
+    a = postprocess(parameters_meta, a)
+    _, r, _, _ = env.step(a)
+    print("Best config: ", a)
+    print("reward: ", r)
 
 def run_algorithm(args):
     total_time = 0

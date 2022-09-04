@@ -139,6 +139,8 @@ def run_sn_workload(destination_folder, duration, port, frontend_cluster_ip):
 def generate_workload_nginx(destination_folder, experiment_version, total_duration, workload_type, new_samples, no_vpa, half_life, n_load_changes=1):
     global loads
     global per_load_duration
+    namespace = "default"
+    utilization_reporting_interval = 15
     threads = 2
     clients = 100
     total_duration = int(total_duration)
@@ -201,6 +203,9 @@ def generate_workload_nginx(destination_folder, experiment_version, total_durati
               (deployment, total_duration_m, destination_folder))
     os.system("tools/log_vpa.sh %s %s %s &" %
               (vpa, total_duration_m, destination_folder))
+
+    os.system(
+        f"python3 tools/kube_utilization.py {namespace} {total_duration} {utilization_reporting_interval} {destination_folder} &")
 
     reward = 0
     for i, (load, duration) in enumerate(zip(loads, per_load_duration)):

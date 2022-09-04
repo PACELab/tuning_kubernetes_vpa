@@ -1,0 +1,54 @@
+ 2430  vim tools/tune_vpa.py 
+ 2433  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI
+ 2434  python3 tools/tune_vpa.py 
+ 2437  python3 tools/tune_vpa.py 
+ 2439  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2440  vim tools/tune_vpa.py 
+ 2447  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2449  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2450  vim tools/tune_vpa.py 
+ 2452  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2454  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2457  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2465  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2466  vim tools/tune_vpa.py 
+ 2468  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2470  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2472  python3 tools/tune_vpa.py -v sn-test --model_iterations=25 --approach bayesopt-gp --acq_fun EI -et sn
+ 2473  python3 tools/tune_vpa.py -v sn-test --model_iterations=25  -et sn
+ 2474  vim tools/tune_vpa.py 
+ 2476  python3 tools/tune_vpa.py -v sn-debug --model_iterations=25  -et sn
+ 2991  python3 tools/tune_vpa.py -v sn-pbr --model_iterations=25  -et sn
+ 2993  python3 tools/tune_vpa.py -v sn-pbr --model_iterations=25  -et sn
+ 2994  python3 tools/tune_vpa.py -v pbr-test --model_iterations=25  -et sn
+ 2996  python3 tools/tune_vpa.py -v pbr-test --model_iterations=25  -et sn
+ 3029  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn
+ 3030  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn > out
+ 3032  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn > out
+ 3034  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn > out
+ 3038  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn --vpa
+ 3060  python3 tools/tune_vpa.py -v pbr-rand-test --model_iterations=25  -et sn --vpa
+ 3062  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3064  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3066  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3068  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3073  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3074  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3080  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3081  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa >> output 2>&1
+ 3082  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3088  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa
+ 3093  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3096  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3098  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3100  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3101  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa -ed 60 > output 2>&1
+ 3103  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa -ed 60 > output 2>&1
+ 3104  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa -ed 120 > output 2>&1
+ 3105  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3113  python3 tools/tune_vpa.py -v pbr-throughput --model_iterations=25  -et sn --vpa > output 2>&1
+ 3115  ps aux | grep tune_vpa
+ 3302  vim tune_vpa.py 
+ 3344  history | tune_vpa
+ 3345  history | grep tune_vpa
+ 3346  history | grep tune_vpa > out

@@ -1,9 +1,9 @@
 import random
 
-def take_action(action):
+def take_action(args, model_iteration, action):
     return -random.uniform(1,100)
 
-def next_observation():
+def next_observation(args):
     """
     1) CPU and memory usage in % of each microservice in sequence
     2) CPU and memory usage in % of the node

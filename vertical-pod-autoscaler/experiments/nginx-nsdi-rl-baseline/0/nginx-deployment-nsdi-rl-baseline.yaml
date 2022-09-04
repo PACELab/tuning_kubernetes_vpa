@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-nsdi-rl-baseline
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deployment-nsdi-rl-baseline
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment-nsdi-rl-baseline
+    spec:
+      containers:
+      - image: nginx
+        name: nginx-container-nsdi-rl-baseline
+        resources:
+          limits:
+            cpu: 50m
+          requests:
+            cpu: 25m
