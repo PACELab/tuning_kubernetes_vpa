@@ -165,12 +165,17 @@ def ddpg_helper(parameters_file):
     fig3.savefig("vpa_ddpgfig3.png")
 
 def evaluate_policy(env, agent, parameters_meta):
-    s = env.reset()
-    a = agent.choose_action(s)  # We do not add noise when evaluating
-    a = postprocess(parameters_meta, a)
-    _, r, _, _ = env.step(a)
-    print("Best config: ", a)
-    print("reward: ", r)
+    r_list = []
+    for i in range(5):
+        s = env.reset()
+        a = agent.choose_action(s)  # We do not add noise when evaluating
+        a = postprocess(parameters_meta, a)
+        _, r, _, _ = env.step(a)
+        print("Best config: ", a)
+        print("reward: ", r)
+        r_list.append(r)
+    print("Average reward: ", np.mean(r_list))
+    print("Std reward: ", np.std(r_list))
 
 def run_algorithm(args):
     total_time = 0
