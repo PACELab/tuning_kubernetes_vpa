@@ -27,15 +27,18 @@ def next_observation(args, model_iteration):
     node_total_memory = 8000 # in megabytes
     node_total_cpu = 8000 # in millicores
     print("out")
-    print(subprocess.run("cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())
-    cpu_nginx  = (float(subprocess.run("cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_cpu) * 100
-    mem_nginx = (float(subprocess.run( "cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_memory) * 100
-    observation += [cpu_nginx, mem_nginx]
-    cpu_node  = (float(subprocess.run( "cat %s/node_userv3-m2-node.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip()) / node_total_cpu) * 100
-    mem_node = (float(subprocess.run( "cat %s/node_userv3-m2-node.csv | awk -F',' '{print $4}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_memory) * 100
-    observation += [cpu_node, mem_node]
-    observation += [10000] #rps
-    observation += [100] #connections
-    observation += [100] #request composition
+    try:
+        print(subprocess.run("cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())
+        cpu_nginx  = (float(subprocess.run("cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_cpu) * 100
+        mem_nginx = (float(subprocess.run( "cat %s/pod_*.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_memory) * 100
+        observation += [cpu_nginx, mem_nginx]
+        cpu_node  = (float(subprocess.run( "cat %s/node_userv3-m2-node.csv | awk -F',' '{print $3}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip()) / node_total_cpu) * 100
+        mem_node = (float(subprocess.run( "cat %s/node_userv3-m2-node.csv | awk -F',' '{print $4}' | tail +2 | datamash max 1"%destination_folder, stdout=subprocess.PIPE, shell=True).stdout.decode("ascii").strip())/node_total_memory) * 100
+        observation += [cpu_node, mem_node]
+        observation += [10000] #rps
+        observation += [100] #connections
+        observation += [100] #request composition
+    except:
+        observation =   [0, 0, 0, 0, 0, 0, 0]
     print(observation)
     return observation
