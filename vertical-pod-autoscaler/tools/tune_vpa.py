@@ -4,14 +4,15 @@ import random
 import sys
 import numpy as np
 import torch
-from lib import plotting
 import pandas as pd
+import time
 
 import helper
 import pbr
 import cb
 import bayesopt
 import arguments
+from lib import plotting
 
 
 sys.path.append("/home/ubuntu/autoscaler/vertical-pod-autoscaler/tools/agent")
@@ -104,9 +105,9 @@ def ddpg_helper(parameters_file):
     # update_freq = 50  # Take 50 steps,then update the networks 50 times
     # evaluate_freq = 5   
     max_train_steps = args.model_iterations  # Maximum number of training steps
-    random_steps = args.model_iterations//2  # Take the random actions in the beginning for the better exploration
+    random_steps = 25  # Take the random actions in the beginning for the better exploration
     update_freq = 5  # Take 50 steps,then update the networks 50 times
-    # evaluate_freq = 1  # Evaluate the policy every 'evaluate_freq' steps
+    evaluate_freq = 50  # Evaluate the policy every 'evaluate_freq' steps
     # evaluate_num = 0  # Record the number of evaluations
     # evaluate_rewards = []  # Record the rewards during the evaluating
     total_steps = 0  # Record the total steps during the training
@@ -129,7 +130,7 @@ def ddpg_helper(parameters_file):
                 epsilon = epsilon*(epsilon_decay**(total_steps/100))
                 a = agent.choose_action(s)
                 a = (a + np.random.normal(0, epsilon * upper_limits, size=action_dim)).clip(lower_limits, upper_limits)
-                a = postprocess(parameters_meta, a)
+            a = postprocess(parameters_meta, a)
             s_, r, done, _ = env.step(a)
             #print("Current step: ", env.current_step)
             # scales reward to converge
@@ -154,15 +155,17 @@ def ddpg_helper(parameters_file):
             stats.episode_rewards[total_steps] += r
             stats.episode_lengths[total_steps] = max_episode_steps
             # Evaluate the policy every 'evaluate_freq' steps
+            # get best config
+            # change to env_evaluate if episode length is more than 1
+            if (total_steps + 1 ) % evaluate_freq == 0:
+                evaluate_policy(env, agent, parameters_meta)
             total_steps += 1
     
-    # get best config
-    # change to env_evaluate if episode length is more than 1
-    evaluate_policy(env, agent, parameters_meta)
+    timestr = time.strftime("%Y%m%d-%H%M%S")
     fig1,fig2,fig3 = plotting.plot_episode_stats(stats, smoothing_window=50)
-    fig1.savefig("vpa_ddpgfig1.png")
-    fig2.savefig("vpa_ddpgfig2-10.png")
-    fig3.savefig("vpa_ddpgfig3.png")
+    fig1.savefig("vpa_ddpgfig1-%s.png"%timestr)
+    fig2.savefig("vpa_ddpgfig2-%s.png"%timestr)
+    fig3.savefig("vpa_ddpgfig3-%s.png"%timestr)
 
 def evaluate_policy(env, agent, parameters_meta):
     r_list = []

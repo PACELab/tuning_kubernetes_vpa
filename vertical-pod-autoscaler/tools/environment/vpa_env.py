@@ -8,7 +8,9 @@ import helper
 
 def take_action(args, total_steps, action):
     experiment_version_folder = os.path.join(args.results_folder , args.experiment_type + "-" + args.experiment_version)
-    return helper.get_reward(args, experiment_version_folder, total_steps, action)
+    # minimize the throughput deficit and halflife parameter value.
+    return -helper.get_reward(args, experiment_version_folder, total_steps, action)
+    #return -action[0]
 
 def next_observation(args, model_iteration):
     """
@@ -18,7 +20,7 @@ def next_observation(args, model_iteration):
     4) Connections
     5) Request composition array in % (three values)
     """
-    os.system("sleep 120") # sleep for the utilization files to be created.
+    #os.system("sleep 120") # sleep for the utilization files to be created.
     iteration_folder = str(model_iteration-1) # previous state
     experiment_version_folder = os.path.join(args.results_folder , args.experiment_type + "-" + args.experiment_version)
     destination_folder = os.path.join(experiment_version_folder, iteration_folder)

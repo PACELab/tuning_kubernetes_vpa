@@ -21,9 +21,9 @@ spec:
     spec:
       containers:
       - args:
-        - --cpu-histogram-decay-half-life=3h9m
-        - --recommendation-margin-fraction=0.9400277485543143
-        - --pod-recommendation-min-cpu-millicores=347
+        - --cpu-histogram-decay-half-life=2h76m
+        - --recommendation-margin-fraction=0.9173362
+        - --pod-recommendation-min-cpu-millicores=178
         image: k8s.gcr.io/autoscaling/vpa-recommender:0.10.0
         imagePullPolicy: Always
         name: recommender

@@ -317,4 +317,6 @@ def modify_deployment_file_nginx(destination_folder, version, experiment_type):
 
 if __name__ == "__main__":
     args = arguments.argument_parser()
-    get_reward(args, 0, [6, 0.15, 25], folder_suffix="", new_samples=True)
+    experiment_version_folder = os.path.join(args.results_folder , args.experiment_type + "-" + args.experiment_version)
+    create_folder_p(experiment_version_folder)
+    get_reward(args, experiment_version_folder,0, [2.7661178,0.9173362,178], folder_suffix="", new_samples=True)
