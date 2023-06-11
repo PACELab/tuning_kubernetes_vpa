@@ -1,0 +1,12 @@
+@inproceedings {285192,
+author = {Ajaykrishna Karthikeyan and Nagarajan Natarajan and Gagan Somashekar and Lei Zhao and Ranjita Bhagwan and Rodrigo Fonseca and Tatiana Racheva and Yogesh Bansal},
+title = {{SelfTune}: Tuning Cluster Managers},
+booktitle = {20th USENIX Symposium on Networked Systems Design and Implementation (NSDI 23)},
+year = {2023},
+isbn = {978-1-939133-33-5},
+address = {Boston, MA},
+pages = {1097--1114},
+url = {https://www.usenix.org/conference/nsdi23/presentation/karthikeyan},
+publisher = {USENIX Association},
+month = apr,
+}
