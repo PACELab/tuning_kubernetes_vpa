@@ -1,9 +1,6 @@
+This repository contains code to tune parameters of microservices applications and the Kubernetes' Vertical Pod Autoscaler using Bluefin algorithm from SelfTune (NSDI 2023). For the recent and official version of SelfTune library, please check [here](https://github.com/microsoft/SelfTune).
 
-
-
-
-
-
+If you use any code from this repository, please consider citing [SelfTune: Tuning Cluster Managers](https://www.usenix.org/conference/nsdi23/presentation/karthikeyan)
 
 
 # Below is form Kubernetes' Readme
